@@ -1,6 +1,6 @@
 # Desert Sandstorms
 
-<p>
+<p align="center">
   <a href="https://github.com/atakkumc/desert-sandstorms/blob/main/LICENSE">
     <img src="https://img.shields.io/github/license/atakkumc/desert-sandstorms.svg">
   </a>
