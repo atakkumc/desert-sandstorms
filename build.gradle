@@ -110,9 +110,6 @@ task curseforge(type: TaskPublishCurseForge, dependsOn: shadowJar) {
   mainFile.changelogType = 'text'
   mainFile.displayName = "${project.mod_name} ${project.mod_version}"
 
-  def sourcesFile = mainFile.withAdditionalFile(sourcesJar)
-  sourcesFile.releaseType = RELEASE_TYPE
-
   mainFile.addGameVersion(rootProject.minecraft_version)
   mainFile.addModLoader("Fabric")
   mainFile.addModLoader("Forge")
@@ -136,7 +133,6 @@ task modrinth(type: TaskModrinthUpload, dependsOn: shadowJar) {
 
   changelog = ENV.CHANGELOG ?: "No changelog provided"
   uploadFile = shadowJar
-  additionalFiles = [sourcesJar]
 
   addGameVersion(project.minecraft_version)
   addLoader('fabric')
@@ -165,7 +161,6 @@ task github() {
 
     def release = releaseBuilder.create()
     release.uploadAsset(file("${project.buildDir}/libs/${archivesBaseName}-${version}.jar"), "application/java-archive");
-    release.uploadAsset(file("${project.buildDir}/libs/${archivesBaseName}-${version}-sources.jar"), "application/java-archive");
   }
 }
 github.dependsOn("${project.path}:shadowJar")
