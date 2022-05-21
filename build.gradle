@@ -98,78 +98,78 @@ artifacts {
 // Publish to curseforge
 import net.darkhax.curseforgegradle.TaskPublishCurseForge;
 
-  task curseforge(type: TaskPublishCurseForge, dependsOn: shadowJar) {
-    onlyIf {
-      ENV.CURSEFORGE_API_KEY && project.hasProperty("curseforge_id")
-    }
-    apiToken = ENV.CURSEFORGE_API_KEY
-    
-    def mainFile = upload(project.curseforge_id, shadowJar)
-    mainFile.releaseType = RELEASE_TYPE
-    mainFile.changelog = ENV.CHANGELOG ?: "No changelog provided"
-    mainFile.changelogType = 'text'
-    mainFile.displayName = "${project.mod_name} ${project.mod_version}"
-
-    def sourcesFile = mainFile.withAdditionalFile(sourcesJar)
-    sourcesFile.releaseType = RELEASE_TYPE
-
-    mainFile.addGameVersion(rootProject.minecraft_version)
-    mainFile.addModLoader("Fabric")
-    mainFile.addModLoader("Forge")
+task curseforge(type: TaskPublishCurseForge, dependsOn: shadowJar) {
+  onlyIf {
+    ENV.CURSEFORGE_API_KEY && project.hasProperty("curseforge_id")
   }
+  apiToken = ENV.CURSEFORGE_API_KEY
+    
+  def mainFile = upload(project.curseforge_id, shadowJar)
+  mainFile.releaseType = RELEASE_TYPE
+  mainFile.changelog = ENV.CHANGELOG ?: "No changelog provided"
+  mainFile.changelogType = 'text'
+  mainFile.displayName = "${project.mod_name} ${project.mod_version}"
+
+  def sourcesFile = mainFile.withAdditionalFile(sourcesJar)
+  sourcesFile.releaseType = RELEASE_TYPE
+
+  mainFile.addGameVersion(rootProject.minecraft_version)
+  mainFile.addModLoader("Fabric")
+  mainFile.addModLoader("Forge")
+}
 
 
 // Publish to modrinth
 import com.modrinth.minotaur.TaskModrinthUpload;
 
-  task modrinth(type: TaskModrinthUpload, dependsOn: shadowJar) {
-    onlyIf {
-      ENV.MODRINTH_TOKEN && project.hasProperty("modrinth_id")
-    }
-
-    token = ENV.MODRINTH_TOKEN
-
-    projectId = project.modrinth_id
-    versionNumber = project.mod_version
-    versionName = "[${ENV.GITHUB_REF_NAME}] ${project.mod_name} ${project.mod_version}"
-    versionType = RELEASE_TYPE
-
-    changelog = ENV.CHANGELOG ?: "No changelog provided"
-    uploadFile = shadowJar
-    additionalFiles = [sourcesJar]
-
-    addGameVersion(project.minecraft_version)
-    addLoader('fabric')
-    addLoader('forge')
+task modrinth(type: TaskModrinthUpload, dependsOn: shadowJar) {
+  onlyIf {
+    ENV.MODRINTH_TOKEN && project.hasProperty("modrinth_id")
   }
-  modrinth.mustRunAfter("${project.path}:curseforge")
+
+  token = ENV.MODRINTH_TOKEN
+
+  projectId = project.modrinth_id
+  versionNumber = project.mod_version
+  versionName = "[${ENV.GITHUB_REF_NAME}] ${project.mod_name} ${project.mod_version}"
+  versionType = RELEASE_TYPE
+
+  changelog = ENV.CHANGELOG ?: "No changelog provided"
+  uploadFile = shadowJar
+  additionalFiles = [sourcesJar]
+
+  addGameVersion(project.minecraft_version)
+  addLoader('fabric')
+  addLoader('forge')
+}
+modrinth.mustRunAfter("${project.path}:curseforge")
 
 // Publish to github releases
 import org.kohsuke.github.GHReleaseBuilder;
 import org.kohsuke.github.GitHub;
 
-  task github() {
-    onlyIf {
-      ENV.GITHUB_TOKEN
-    }
-
-    doLast {
-      def github = GitHub.connectUsingOAuth(ENV.GITHUB_TOKEN as String)
-      def repository = github.getRepository(ENV.GITHUB_REPOSITORY)
-
-      def releaseBuilder = new GHReleaseBuilder(repository, project.mod_version as String)
-      releaseBuilder.name("[${ENV.GITHUB_REF_NAME}] ${project.mod_name} ${project.mod_version}")
-      releaseBuilder.body(ENV.CHANGELOG ?: "No changelog provided")
-      releaseBuilder.commitish(ENV.GITHUB_REF_NAME)
-      releaseBuilder.prerelease = RELEASE_TYPE != "release"
-
-      def release = releaseBuilder.create()
-      release.uploadAsset(file("${project.buildDir}/libs/${archivesBaseName}-${version}.jar"), "application/java-archive");
-      release.uploadAsset(file("${project.buildDir}/libs/${archivesBaseName}-${version}-sources.jar"), "application/java-archive");
-    }
+task github() {
+  onlyIf {
+    ENV.GITHUB_TOKEN
   }
-  github.dependsOn("${project.path}:shadowJar")
-  github.mustRunAfter("${project.path}:modrinth")
+
+  doLast {
+    def github = GitHub.connectUsingOAuth(ENV.GITHUB_TOKEN as String)
+    def repository = github.getRepository(ENV.GITHUB_REPOSITORY)
+
+    def releaseBuilder = new GHReleaseBuilder(repository, project.mod_version as String)
+    releaseBuilder.name("[${ENV.GITHUB_REF_NAME}] ${project.mod_name} ${project.mod_version}")
+    releaseBuilder.body(ENV.CHANGELOG ?: "No changelog provided")
+    releaseBuilder.commitish(ENV.GITHUB_REF_NAME)
+    releaseBuilder.prerelease = RELEASE_TYPE != "release"
+
+    def release = releaseBuilder.create()
+    release.uploadAsset(file("${project.buildDir}/libs/${archivesBaseName}-${version}.jar"), "application/java-archive");
+    release.uploadAsset(file("${project.buildDir}/libs/${archivesBaseName}-${version}-sources.jar"), "application/java-archive");
+  }
+}
+github.dependsOn("${project.path}:shadowJar")
+github.mustRunAfter("${project.path}:modrinth")
 
 
 
