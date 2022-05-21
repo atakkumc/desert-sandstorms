@@ -18,6 +18,7 @@ configurations {
 
 // Grab the environment variables
 def ENV = System.getenv()
+def RELEASE_TYPE = project.findProperty("version_type") ?: ENV.RELEASE_CHANNEL ?: "release";
 
 architectury {
     minecraft = rootProject.minecraft_version
@@ -54,7 +55,7 @@ allprojects {
 
     group = rootProject.maven_group
     archivesBaseName = rootProject.archives_base_name + (ENV.CI ? "-${ENV.GITHUB_REF_NAME}": "-dev")
-    version = project.mod_version + (ENV.CI ? "": "+local")
+    version = project.mod_version + (ENV.CI ? "+${RELEASE_TYPE}": "+local")
 
     repositories {
         // Add repositories to retrieve artifacts from in here.
@@ -104,13 +105,13 @@ import net.darkhax.curseforgegradle.TaskPublishCurseForge;
     apiToken = ENV.CURSEFORGE_API_KEY
     
     def mainFile = upload(project.curseforge_id, shadowJar)
-    mainFile.releaseType = project.findProperty("version_type") ?: ENV.RELEASE_CHANNEL ?: "release"
+    mainFile.releaseType = RELEASE_TYPE
     mainFile.changelog = ENV.CHANGELOG ?: "No changelog provided"
     mainFile.changelogType = 'text'
-    mainFile.displayName = "[${ENV.GITHUB_REF_NAME}] ${project.mod_name} ${version}"
+    mainFile.displayName = "${project.mod_name} ${project.mod_version}"
 
     def sourcesFile = mainFile.withAdditionalFile(sourcesJar)
-    sourcesFile.releaseType = project.findProperty("version_type") ?: ENV.RELEASE_CHANNEL ?: "release"
+    sourcesFile.releaseType = RELEASE_TYPE
 
     mainFile.addGameVersion(rootProject.minecraft_version)
     mainFile.addModLoader("Fabric")
@@ -129,9 +130,9 @@ import com.modrinth.minotaur.TaskModrinthUpload;
     token = ENV.MODRINTH_TOKEN
 
     projectId = project.modrinth_id
-    versionNumber = version
-    versionName = "[${ENV.GITHUB_REF_NAME}] ${project.mod_name} ${version}"
-    versionType = project.findProperty("version_type") ?: ENV.RELEASE_CHANNEL ?: "release"
+    versionNumber = project.mod_version
+    versionName = "[${ENV.GITHUB_REF_NAME}] ${project.mod_name} ${project.mod_version}"
+    versionType = RELEASE_TYPE
 
     changelog = ENV.CHANGELOG ?: "No changelog provided"
     uploadFile = shadowJar
@@ -155,10 +156,11 @@ import org.kohsuke.github.GitHub;
       def github = GitHub.connectUsingOAuth(ENV.GITHUB_TOKEN as String)
       def repository = github.getRepository(ENV.GITHUB_REPOSITORY)
 
-      def releaseBuilder = new GHReleaseBuilder(repository, version as String)
-      releaseBuilder.name("${archivesBaseName}-${version}")
+      def releaseBuilder = new GHReleaseBuilder(repository, project.mod_version as String)
+      releaseBuilder.name("[${ENV.GITHUB_REF_NAME}] ${project.mod_name} ${project.mod_version}")
       releaseBuilder.body(ENV.CHANGELOG ?: "No changelog provided")
       releaseBuilder.commitish(ENV.GITHUB_REF_NAME)
+      releaseBuilder.prerelease = RELEASE_TYPE != "release"
 
       def release = releaseBuilder.create()
       release.uploadAsset(file("${project.buildDir}/libs/${archivesBaseName}-${version}.jar"), "application/java-archive");
