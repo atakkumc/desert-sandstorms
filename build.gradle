@@ -136,6 +136,7 @@ import com.modrinth.minotaur.TaskModrinthUpload;
 
     changelog = ENV.CHANGELOG ?: "No changelog provided"
     uploadFile = shadowJar
+    additionalFiles = [sourcesJar]
 
     addGameVersion(project.minecraft_version)
     addLoader('fabric')
