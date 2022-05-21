@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "id": "desert_sandstorms",
+  "version": "${version}",
+  "name": "Desert Sandstorms",
+  "description": "Makes deserts less boring during rain and thunderstorms",
+  "authors": [
+    {
+      "name": "Atakku",
+      "contact": {
+        "homepage": "https://atakku.dev/",
+        "email": "atakkudev@gmail.com"
+      }
+    }
+  ],
+  "contact": {
+    "homepage": "https://atakku.dev/mods/desert-sandstorms",
+    "sources": "https://github.com/atakkumc/desert-sandstorms",
+    "issues": "https://github.com/atakkumc/desert-sandstorms/issues"
+  },
+  "license": "LGPL-3.0-or-later",
+  "icon": "assets/desert_sandstorms/icon.png",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "dev.atakku.desertsandstorms.fabric.DesertSandstormsFabric"
+    ]
+  },
+  "mixins": [
+    "desert_sandstorms.mixins.json",
+    "desert_sandstorms-common.mixins.json"
+  ],
+  "depends": {
+    "minecraft": ">=1.18.2"
+  }
+}

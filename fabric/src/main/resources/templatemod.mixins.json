@@ -1,0 +1,12 @@
+{
+  "required": true,
+  "package": "dev.atakku.desertsandstorms.fabric.mixin",
+  "compatibilityLevel": "JAVA_17",
+  "client": [
+  ],
+  "mixins": [
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

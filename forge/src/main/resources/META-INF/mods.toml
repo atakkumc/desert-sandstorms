@@ -1,0 +1,28 @@
+modLoader = "javafml"
+loaderVersion = "[40,)"
+#issueTrackerURL = ""
+license = "LGPL-3.0-or-later"
+
+[[mods]]
+modId = "desert_sandstorms"
+version = "${version}"
+displayName = "Desert Sandstorms"
+authors = "AtakkuDev"
+description = '''
+Makes deserts less boring during rain and thunderstorms
+'''
+#logoFile = ""
+
+[[dependencies.desert_sandstorms]]
+modId = "forge"
+mandatory = true
+versionRange = "[40,)"
+ordering = "NONE"
+side = "BOTH"
+
+[[dependencies.desert_sandstorms]]
+modId = "minecraft"
+mandatory = true
+versionRange = "[1.18.2,)"
+ordering = "NONE"
+side = "BOTH"

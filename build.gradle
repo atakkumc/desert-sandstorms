@@ -1,0 +1,179 @@
+buildscript {
+  dependencies {
+    classpath 'org.kohsuke:github-api:1.135'
+  }
+}
+
+plugins {
+	  id "com.github.johnrengelman.shadow" version '7.1.2' apply false
+    id "architectury-plugin" version "3.4-SNAPSHOT"
+    id "dev.architectury.loom" version "0.11.0-SNAPSHOT" apply false
+    id "net.darkhax.curseforgegradle" version "1.0.9" apply false
+    id "com.modrinth.minotaur" version "1.2.1" apply false
+}
+
+configurations {
+    shade
+}
+
+// Grab the environment variables
+def ENV = System.getenv()
+
+architectury {
+    minecraft = rootProject.minecraft_version
+}
+
+subprojects {
+    apply plugin: "dev.architectury.loom"
+
+    loom {
+        silentMojangMappingsLicense()
+    }
+
+    configurations {
+		remappedJar {}
+	}
+
+    dependencies {
+        minecraft "com.mojang:minecraft:${rootProject.minecraft_version}"
+	    mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
+    }
+
+    artifacts {
+	    remappedJar remapJar
+    }
+}
+
+allprojects {
+    apply plugin: "java"
+    apply plugin: "architectury-plugin"
+    apply plugin: "maven-publish"
+
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+
+    group = rootProject.maven_group
+    archivesBaseName = rootProject.archives_base_name + (ENV.CI ? "-${ENV.GITHUB_REF_NAME}": "-dev")
+    version = project.mod_version + (ENV.CI ? "": "+local")
+
+    repositories {
+        // Add repositories to retrieve artifacts from in here.
+        // You should only use this when depending on other mods because
+        // Loom adds the essential maven repositories to download Minecraft and libraries from automatically.
+        // See https://docs.gradle.org/current/userguide/declaring_repositories.html
+        // for more information about repositories.
+    }
+
+    tasks.withType(JavaCompile) {
+        options.encoding = "UTF-8"
+        options.release = 17
+    }
+
+    java {
+        withSourcesJar()
+    }
+}
+
+apply plugin: "com.github.johnrengelman.shadow"
+
+dependencies {
+    rootProject.subprojects.forEach(proj -> {
+        shade( project( path: proj.getName(), configuration: 'remappedJar' ) ) {
+			transitive = false
+	    }
+    })
+}
+
+shadowJar {
+    configurations = [ project.configurations.shade ]
+    from sourceSets.main.allSource
+    classifier null
+}
+
+artifacts {
+    archives shadowJar
+}
+
+// Publish to curseforge
+import net.darkhax.curseforgegradle.TaskPublishCurseForge;
+
+  task curseforge(type: TaskPublishCurseForge, dependsOn: shadowJar) {
+    onlyIf {
+      ENV.CURSEFORGE_API_KEY && project.hasProperty("curseforge_id")
+    }
+    apiToken = ENV.CURSEFORGE_API_KEY
+    
+    def mainFile = upload(project.curseforge_id, shadowJar)
+    mainFile.releaseType = project.findProperty("version_type") ?: ENV.RELEASE_CHANNEL ?: "release"
+    mainFile.changelog = ENV.CHANGELOG ?: "No changelog provided"
+    mainFile.changelogType = 'text'
+    mainFile.displayName = "[${ENV.GITHUB_REF_NAME}] ${project.mod_name} ${version}"
+
+    def sourcesFile = mainFile.withAdditionalFile(sourcesJar)
+    sourcesFile.releaseType = project.findProperty("version_type") ?: ENV.RELEASE_CHANNEL ?: "release"
+
+    mainFile.addGameVersion(rootProject.minecraft_version)
+    mainFile.addModLoader("Fabric")
+    mainFile.addModLoader("Forge")
+  }
+
+
+// Publish to modrinth
+import com.modrinth.minotaur.TaskModrinthUpload;
+
+  task modrinth(type: TaskModrinthUpload, dependsOn: shadowJar) {
+    onlyIf {
+      ENV.MODRINTH_TOKEN && project.hasProperty("modrinth_id")
+    }
+
+    token = ENV.MODRINTH_TOKEN
+
+    projectId = project.modrinth_id
+    versionNumber = version
+    versionName = "[${ENV.GITHUB_REF_NAME}] ${project.mod_name} ${version}"
+    versionType = project.findProperty("version_type") ?: ENV.RELEASE_CHANNEL ?: "release"
+
+    changelog = ENV.CHANGELOG ?: "No changelog provided"
+    uploadFile = shadowJar
+
+    addGameVersion(project.minecraft_version)
+    addLoader('fabric')
+    addLoader('forge')
+  }
+  modrinth.mustRunAfter("${project.path}:curseforge")
+
+// Publish to github releases
+import org.kohsuke.github.GHReleaseBuilder;
+import org.kohsuke.github.GitHub;
+
+  task github() {
+    onlyIf {
+      ENV.GITHUB_TOKEN
+    }
+
+    doLast {
+      def github = GitHub.connectUsingOAuth(ENV.GITHUB_TOKEN as String)
+      def repository = github.getRepository(ENV.GITHUB_REPOSITORY)
+
+      def releaseBuilder = new GHReleaseBuilder(repository, version as String)
+      releaseBuilder.name("${archivesBaseName}-${version}")
+      releaseBuilder.body(ENV.CHANGELOG ?: "No changelog provided")
+      releaseBuilder.commitish(ENV.GITHUB_REF_NAME)
+
+      def release = releaseBuilder.create()
+      release.uploadAsset(file("${project.buildDir}/libs/${archivesBaseName}-${version}.jar"), "application/java-archive");
+      release.uploadAsset(file("${project.buildDir}/libs/${archivesBaseName}-${version}-sources.jar"), "application/java-archive");
+    }
+  }
+  github.dependsOn("${project.path}:shadowJar")
+  github.mustRunAfter("${project.path}:modrinth")
+
+
+
+task release
+
+release.dependsOn("${project.path}:build")
+release.dependsOn("${project.path}:curseforge")
+release.dependsOn("${project.path}:modrinth")
+release.dependsOn("${project.path}:github")
+release.dependsOn("${project.path}:publish")
