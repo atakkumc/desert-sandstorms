@@ -157,7 +157,7 @@ task github() {
     releaseBuilder.name("[${ENV.GITHUB_REF_NAME}] ${project.mod_name} ${project.mod_version}")
     releaseBuilder.body(ENV.CHANGELOG ?: "No changelog provided")
     releaseBuilder.commitish(ENV.GITHUB_REF_NAME)
-    releaseBuilder.prerelease = RELEASE_TYPE != "release"
+    releaseBuilder.prerelease(RELEASE_TYPE != "release")
 
     def release = releaseBuilder.create()
     release.uploadAsset(file("${project.buildDir}/libs/${archivesBaseName}-${version}.jar"), "application/java-archive");
